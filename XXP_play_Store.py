@@ -85,6 +85,13 @@ class play:
         self.count_of_case.reset_index(inplace=True)
         self.count_of_case.columns.name = None
         self.count_of_case = self.count_of_case.rename(columns = {'index':'Rating'})
+        self._ = self.count_of_case.columns.to_list()
+        self.week_list = []
+        for __ in self._:
+            if __ not in ['Ranking','total']:
+                self.week_list.append(__)
+
+
 
         self.data_visualization(self.Ad_count_ad_name,self.Ad_count_date_creation_time,self.top_10_Type,self.tagging, self.count_of_case)
 
@@ -105,7 +112,7 @@ class play:
         st.write(f'Tagging report')
         st.dataframe(self.tagging)
         st.write(f'Count of cases report')
-        df_melted = self.count_of_case.melt(id_vars='Rating', value_vars=['week 1','week 2','week 3','week 4'],var_name='Week', value_name='Count')
+        df_melted = self.count_of_case.melt(id_vars='Rating', value_vars=self.week_list,var_name='Week', value_name='Count')
         fig = px.bar(df_melted, x='Rating', y='Count', color='Week', barmode='group', title='Weekly and Total Counts by Rating')
         tab1, tab2 = st.tabs(["Chart", "Dataframe"])
         tab1.plotly_chart(fig, height= 250)
