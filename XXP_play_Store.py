@@ -11,6 +11,10 @@ class play:
         # Parsing the data 
         self.data = data_df.parse('Raw')
         self.emp_data = data_df.parse('Emp List')
+        self.container_1 = st.container()
+        self.container_2 = st.container()
+        self.container_3 = st.container()
+        self.container_4 = st.container()
 
           # Dropping the columns if they already exists
         try:
@@ -45,7 +49,18 @@ class play:
 
         # creating the AD count 
         # will use this for visualization later
-        self.Ad_count_ad_name = self.data.pivot_table(
+        self.unique_Case_First_Responded_by_Advisor = self.data['Case First Responded by Advisor'].dropna().unique()
+        
+
+        # Let user select names to filter
+        with self.container_1:
+            self.selected_names = st.multiselect("Select advisor name: ", options=self.unique_Case_First_Responded_by_Advisor, default=self.unique_Case_First_Responded_by_Advisor)
+
+
+
+        # Filter based on selected names
+        self.filtered_data = self.data[self.data['Case First Responded by Advisor'].isin(self.selected_names)]
+        self.Ad_count_ad_name = self.filtered_data.pivot_table(
         index='Case First Responded by Advisor',
         columns='Date (Case Updated Time)',
         aggfunc='size',
@@ -61,12 +76,41 @@ class play:
 
         # Creating the Top-10 Report
         # will use this for visualization later
+        self.week_unique = self.data['week'].dropna().unique()
 
-        self.top_10_Type = self.data.pivot_table(index='Type',columns='Date (Case Updated Time)',aggfunc='size',fill_value=0).assign(Total = lambda x : x.sum(axis=1)).sort_values('Total', ascending= False).head(10)
+
+        # User select the filter on week
+        with self.container_2:
+            self.selected_week_A = st.multiselect('Select the week number for Top-10 Report :',options=self.week_unique,default=self.week_unique)
+
+
+        self.custom_week_data = self.data[self.data['week'].isin(self.selected_week_A)]
+        self.top_10_Type = self.custom_week_data.pivot_table(index='Type',columns='Date (Case Updated Time)',aggfunc='size',fill_value=0).assign(Total = lambda x : x.sum(axis=1)).sort_values('Total', ascending= False).head(10)
         self.top_10_Type.columns.name = "Days"
         self.total_col = pd.DataFrame(self.top_10_Type.sum(axis=0)).T
         self.total_col.index = ['Grand_total']
         self.top_10_Type = pd.concat([self.top_10_Type,self.total_col])
+
+        # Sub Type top 10
+
+        with self.container_3:
+            self.selected_week_B = st.multiselect('Select the week number for Sub type Top-10 Report :',options=self.week_unique,default=self.week_unique)
+        self.custom_week_data_sub = self.data[self.data['week'].isin(self.selected_week_B)]
+        self.sub_top_10_Type = self.custom_week_data_sub.pivot_table(index='Playstore Sub Type',columns='Date (Case Updated Time)',aggfunc='size',fill_value=0).assign(Total = lambda x : x.sum(axis=1)).sort_values('Total', ascending= False).head(10)
+        self.sub_top_10_Type.columns.name = "Days"
+        self.sub_total_col = pd.DataFrame(self.sub_top_10_Type.sum(axis=0)).T
+        self.sub_total_col.index = ['Grand_total']
+        self.sub_top_10_Type = pd.concat([self.sub_top_10_Type,self.sub_total_col])
+
+         # Sub-sub Type top 10
+        with self.container_4:
+             self.selected_week_C = st.multiselect('Select the week number for Sub-Sub type Top-10 Report :',options=self.week_unique,default=self.week_unique)
+        self.custom_week_data_sub_sub = self.data[self.data['week'].isin(self.selected_week_C)]
+        self.sub_sub_top_10_Type = self.custom_week_data_sub_sub.pivot_table(index='Playstore Sub Sub Type',columns='Date (Case Updated Time)',aggfunc='size',fill_value=0).assign(Total = lambda x : x.sum(axis=1)).sort_values('Total', ascending= False).head(10)
+        self.sub_sub_top_10_Type.columns.name = "Days"
+        self.sub_sub_total_col = pd.DataFrame(self.sub_sub_top_10_Type.sum(axis=0)).T
+        self.sub_sub_total_col.index = ['Grand_total']
+        self.sub_sub_top_10_Type = pd.concat([self.sub_sub_top_10_Type,self.sub_sub_total_col])
 
         # Creating the Tagging Report 
         # will use this for visualization later
@@ -87,28 +131,38 @@ class play:
         self.count_of_case = self.count_of_case.rename(columns = {'index':'Rating'})
         self._ = self.count_of_case.columns.to_list()
         self.week_list = []
-        for __ in self._:
-            if __ not in ['Ranking','total']:
-                self.week_list.append(__)
+        for i in self._:
+            if i not in ['Ranking','total']:
+                self.week_list.append(str(i))
 
 
 
-        self.data_visualization(self.Ad_count_ad_name,self.Ad_count_date_creation_time,self.top_10_Type,self.tagging, self.count_of_case)
+        self.data_visualization(self.Ad_count_ad_name,self.Ad_count_date_creation_time,self.top_10_Type,self.sub_top_10_Type,self.sub_sub_top_10_Type,self.tagging, self.count_of_case)
 
 
-    def data_visualization(self,Ad_count_ad_name,Ad_count_date_creation_time,top_10_Type,tagging, count_of_case):
+    def data_visualization(self,Ad_count_ad_name,Ad_count_date_creation_time,top_10_Type,sub_top_10_Type,sub_sub_top_10_Type,tagging, count_of_case):
         self.Ad_count_ad_name = Ad_count_ad_name
         self.Ad_count_date_creation_time = Ad_count_date_creation_time
         self.top_10_Type = top_10_Type
+        self.sub_sub_total_col = sub_top_10_Type
+        self.sub_sub_top_10_Type = sub_sub_top_10_Type
         self.tagging = tagging
         self.count_of_case = count_of_case
 
-        st.write(f'AD count name report')
-        st.dataframe(self.Ad_count_ad_name)
-        st.write(f'Ad Count Date creation time report')
-        st.dataframe(self.Ad_count_date_creation_time)
-        st.write(f'Top 10 type report')
-        st.dataframe(self.top_10_Type)
+        with self.container_1:
+            st.write(f'AD count name report')
+            st.dataframe(self.Ad_count_ad_name)
+            st.write(f'Ad Count Date creation time report')
+            st.dataframe(self.Ad_count_date_creation_time)
+        with self.container_2:
+            st.write(f'Top 10 type report')
+            st.dataframe(self.top_10_Type)
+        with self.container_3:
+            st.write(f' Sub Top 10 type report')
+            st.dataframe(self.sub_top_10_Type)
+        with self.container_4:
+            st.write(f'Sub Sub Top 10 type report')
+            st.dataframe(self.sub_sub_top_10_Type)
         st.write(f'Tagging report')
         st.dataframe(self.tagging)
         st.write(f'Count of cases report')
